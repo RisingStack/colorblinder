@@ -1,5 +1,13 @@
 import React, { Component } from "react";
-import { View, Dimensions, Text, Image, TouchableOpacity } from "react-native";
+import {
+  View,
+  Animated,
+  Dimensions,
+  Text,
+  Image,
+  TouchableOpacity
+} from "react-native";
+import { Audio } from "expo";
 import { Header } from "../../components";
 import { generateRGB, mutateRGB } from "../../utilities";
 import styles from "./styles";
@@ -7,23 +15,58 @@ import styles from "./styles";
 export default class Home extends Component {
   state = {
     points: 0,
-    timeLeft: 5,
+    timeLeft: 15,
     rgb: generateRGB(),
     size: 2,
-    gameState: "INGAME" // three possible states: 'INGAME', 'PAUSED' and 'LOST'
+    gameState: "INGAME", // three possible states: 'INGAME', 'PAUSED' and 'LOST'
+    shakeAnimation: new Animated.Value(0)
   };
 
-  componentWillMount() {
+  async componentWillMount() {
     this.generateNewRound();
     this.interval = setInterval(() => {
       if (this.state.gameState === "INGAME") {
-        if (this.state.timeLeft === 0) {
+        if (this.state.timeLeft <= 0) {
+          this.loseFX.replayAsync();
+          this.backgroundMusic.stopAsync();
           this.setState({ gameState: "LOST" });
         } else {
           this.setState({ timeLeft: this.state.timeLeft - 1 });
         }
       }
     }, 1000);
+
+    this.backgroundMusic = new Audio.Sound();
+    this.buttonFX = new Audio.Sound();
+    this.tileCorrectFX = new Audio.Sound();
+    this.tileWrongFX = new Audio.Sound();
+    this.pauseInFX = new Audio.Sound();
+    this.pauseOutFX = new Audio.Sound();
+    this.loseFX = new Audio.Sound();
+
+    try {
+      await this.backgroundMusic.loadAsync(
+        require("../../assets/music/Komiku_BattleOfPogs.mp3")
+      );
+      await this.buttonFX.loadAsync(require("../../assets/sfx/button.wav"));
+      await this.tileCorrectFX.loadAsync(
+        require("../../assets/sfx/tile_tap.wav")
+      );
+      await this.tileWrongFX.loadAsync(
+        require("../../assets/sfx/tile_wrong.wav")
+      );
+      await this.pauseInFX.loadAsync(require("../../assets/sfx/pause_in.wav"));
+      await this.pauseOutFX.loadAsync(
+        require("../../assets/sfx/pause_out.wav")
+      );
+      await this.loseFX.loadAsync(require("../../assets/sfx/lose.wav"));
+
+      await this.backgroundMusic.setIsLoopingAsync(true);
+      await this.backgroundMusic.playAsync();
+      // Your sound is playing!
+    } catch (error) {
+      // An error occurred!
+    }
   }
 
   componentWillUnmount() {
@@ -39,10 +82,12 @@ export default class Home extends Component {
     const mRGB = mutateRGB(RGB);
     const { points } = this.state;
     this.setState({
+      size: Math.min(Math.max(Math.floor(Math.sqrt(points)), 2), 5)
+    });
+    this.setState({
       diffTileIndex: [this.generateSizeIndex(), this.generateSizeIndex()],
       diffTileColor: `rgb(${mRGB.r}, ${mRGB.g}, ${mRGB.b})`,
-      rgb: RGB,
-      size: Math.min(Math.max(Math.round(Math.sqrt(points)), 2), 4)
+      rgb: RGB
     });
   };
 
@@ -50,30 +95,60 @@ export default class Home extends Component {
     const { diffTileIndex, points, timeLeft } = this.state;
     if (rowIndex == diffTileIndex[0] && columnIndex == diffTileIndex[1]) {
       // good tile
-      this.setState({ points: points + 1, timeLeft: timeLeft + 3 });
+      this.tileCorrectFX.replayAsync();
+      this.setState({ points: points + 1, timeLeft: timeLeft + 2 });
       this.generateNewRound();
     } else {
       // wrong tile
-      this.setState({ timeLeft: timeLeft - 1 });
+      Animated.sequence([
+        Animated.timing(this.state.shakeAnimation, {
+          toValue: 50,
+          duration: 100
+        }),
+        Animated.timing(this.state.shakeAnimation, {
+          toValue: -50,
+          duration: 100
+        }),
+        Animated.timing(this.state.shakeAnimation, {
+          toValue: 50,
+          duration: 100
+        }),
+        Animated.timing(this.state.shakeAnimation, {
+          toValue: -50,
+          duration: 100
+        }),
+        Animated.timing(this.state.shakeAnimation, {
+          toValue: 0,
+          duration: 100
+        })
+      ]).start();
+      this.tileWrongFX.replayAsync();
+      this.setState({ timeLeft: timeLeft - 2 });
     }
   };
 
-  onBottomBarPress = () => {
+  onBottomBarPress = async () => {
     switch (this.state.gameState) {
       case "INGAME": {
+        this.pauseInFX.replayAsync();
         this.setState({ gameState: "PAUSED" });
         break;
       }
       case "PAUSED": {
+        this.pauseOutFX.replayAsync();
         this.setState({ gameState: "INGAME" });
         break;
       }
       case "LOST": {
-        this.setState({
-          gameState: "INGAME",
+        this.backgroundMusic.replayAsync();
+        await this.setState({
           points: 0,
           timeLeft: 15,
           size: 2
+        });
+        this.generateNewRound();
+        this.setState({
+          gameState: "INGAME"
         });
         break;
       }
@@ -81,7 +156,14 @@ export default class Home extends Component {
   };
 
   render() {
-    const { rgb, size, diffTileIndex, diffTileColor, gameState } = this.state;
+    const {
+      rgb,
+      size,
+      diffTileIndex,
+      diffTileColor,
+      gameState,
+      shakeAnimation
+    } = this.state;
     const { height } = Dimensions.get("window");
     const bottomIcon =
       gameState === "INGAME"
@@ -92,12 +174,15 @@ export default class Home extends Component {
 
     return (
       <View style={styles.container}>
-        <Header />
-        <View
+        <View style={{ position: "absolute", top: height / 6 }}>
+          <Header />
+        </View>
+        <Animated.View
           style={{
             height: height / 2.5,
             width: height / 2.5,
-            flexDirection: "row"
+            flexDirection: "row",
+            left: shakeAnimation
           }}
         >
           {gameState === "INGAME" ? (
@@ -144,7 +229,7 @@ export default class Home extends Component {
               <Text style={styles.pausedText}>U DED</Text>
             </View>
           )}
-        </View>
+        </Animated.View>
         <View style={styles.bottomContainer}>
           <View style={{ flex: 1 }}>
             <Text style={styles.counterCount}>{this.state.points}</Text>

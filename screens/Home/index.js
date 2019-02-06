@@ -1,5 +1,6 @@
 import React, { Component } from "react";
 import { View, Text, Image, TouchableOpacity } from "react-native";
+import { Audio } from "expo";
 import { Header } from "../../components";
 import styles from "./styles";
 
@@ -8,8 +9,26 @@ export default class Home extends Component {
     isSoundOn: true
   };
 
+  async componentWillMount() {
+    this.backgroundMusic = new Audio.Sound();
+    this.buttonFX = new Audio.Sound();
+    try {
+      await this.backgroundMusic.loadAsync(
+        require("../../assets/music/Komiku_Mushrooms.mp3")
+      );
+      await this.buttonFX.loadAsync(require("../../assets/sfx/button.wav"));
+      await this.backgroundMusic.setIsLoopingAsync(true);
+      await this.backgroundMusic.playAsync();
+      // Your sound is playing!
+    } catch (error) {
+      // An error occurred!
+    }
+  }
+
   onPlayPress = () => {
-    this.props.navigation.navigate('Game');
+    this.buttonFX.playAsync();
+    this.backgroundMusic.stopAsync();
+    this.props.navigation.navigate("Game");
   };
 
   onLeaderboardPress = () => {
@@ -38,7 +57,9 @@ export default class Home extends Component {
           />
           <Text style={styles.play}>PLAY!</Text>
         </TouchableOpacity>
-        <View style={{ flexDirection: "row", alignItems: "center", marginTop: 20 }}>
+        <View
+          style={{ flexDirection: "row", alignItems: "center", marginTop: 20 }}
+        >
           <Image
             source={require("../../assets/icons/trophy.png")}
             style={styles.trophyIcon}
