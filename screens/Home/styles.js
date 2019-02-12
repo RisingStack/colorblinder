@@ -1,4 +1,5 @@
 import { StyleSheet } from "react-native";
+import { isIphoneX } from "../../utilities";
 
 export default StyleSheet.create({
   container: {
@@ -41,10 +42,8 @@ export default StyleSheet.create({
     marginRight: 12.5
   },
   bottomContainer: {
-    position: "absolute",
-    left: 15,
-    right: 15,
-    bottom: 12.5,
+    marginBottom: isIphoneX() ? 0 : "5%",
+    marginHorizontal: "5%",
     flexDirection: "row"
   },
   copyrightText: {

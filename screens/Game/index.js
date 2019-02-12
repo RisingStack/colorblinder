@@ -1,6 +1,7 @@
 import React, { Component } from "react";
 import {
   View,
+  SafeAreaView,
   Animated,
   Dimensions,
   Text,
@@ -31,20 +32,20 @@ export default class Game extends Component {
 
   async componentWillMount() {
     this.generateNewRound();
-    retrieveData('highScore').then(val => this.setState({ bestPoints: val }));
-    retrieveData('bestTime').then(val => this.setState({ bestTime: val }));
+    retrieveData("highScore").then(val => this.setState({ bestPoints: val }));
+    retrieveData("bestTime").then(val => this.setState({ bestTime: val }));
     this.interval = setInterval(async () => {
       if (this.state.gameState === "INGAME") {
         if (this.state.timeLeft > this.state.bestTime) {
           this.setState(state => ({ bestTime: state.timeLeft }));
-          storeData('bestTime', this.state.timeLeft);
+          storeData("bestTime", this.state.timeLeft);
         }
         if (this.state.timeLeft <= 0) {
           this.loseFX.replayAsync();
           this.backgroundMusic.stopAsync();
           if (this.state.points > this.state.bestPoints) {
             this.setState(state => ({ bestPoints: state.points }));
-            storeData('highScore', this.state.points);
+            storeData("highScore", this.state.points);
           }
           this.setState({ gameState: "LOST" });
         } else {
@@ -190,96 +191,100 @@ export default class Game extends Component {
         : require("../../assets/icons/replay.png");
 
     return (
-      <View style={styles.container}>
-        <View style={{ position: "absolute", top: height / 6 }}>
-          <Header />
+      <SafeAreaView style={styles.container}>
+        <View style={{ flex: 1 }}>
+          <View style={{ position: "absolute", top: height / 6 }}>
+            <Header />
+          </View>
+          <Animated.View
+            style={{
+              height: height / 2.5,
+              width: height / 2.5,
+              flexDirection: "row",
+              left: shakeAnimation
+            }}
+          >
+            {gameState === "INGAME" ? (
+              Array(size)
+                .fill()
+                .map((val, columnIndex) => (
+                  <View
+                    style={{ flex: 1, flexDirection: "column" }}
+                    key={columnIndex}
+                  >
+                    {Array(size)
+                      .fill()
+                      .map((val, rowIndex) => (
+                        <TouchableOpacity
+                          key={`${rowIndex}.${columnIndex}`}
+                          style={{
+                            flex: 1,
+                            backgroundColor:
+                              rowIndex == diffTileIndex[0] &&
+                              columnIndex == diffTileIndex[1]
+                                ? diffTileColor
+                                : `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`,
+                            margin: 2
+                          }}
+                          onPress={() =>
+                            this.onTilePress(rowIndex, columnIndex)
+                          }
+                        />
+                      ))}
+                  </View>
+                ))
+            ) : gameState === "PAUSED" ? (
+              <View style={styles.pausedContainer}>
+                <Image
+                  source={require("../../assets/icons/mug.png")}
+                  style={styles.pausedIcon}
+                />
+                <Text style={styles.pausedText}>COVFEFE BREAK</Text>
+              </View>
+            ) : (
+              <View style={styles.pausedContainer}>
+                <Image
+                  source={require("../../assets/icons/dead.png")}
+                  style={styles.pausedIcon}
+                />
+                <Text style={styles.pausedText}>U DED</Text>
+              </View>
+            )}
+          </Animated.View>
+          <View style={styles.bottomContainer}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.counterCount}>{this.state.points}</Text>
+              <Text style={styles.counterLabel}>points</Text>
+              <View style={styles.bestContainer}>
+                <Image
+                  source={require("../../assets/icons/trophy.png")}
+                  style={styles.bestIcon}
+                />
+                <Text style={styles.bestLabel}>{this.state.bestPoints}</Text>
+              </View>
+            </View>
+            <View style={{ flex: 1 }}>
+              <TouchableOpacity
+                style={{ alignItems: "center" }}
+                onPress={this.onBottomBarPress}
+              >
+                <Image source={bottomIcon} style={styles.bottomIcon} />
+              </TouchableOpacity>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.counterCount}>{this.state.timeLeft}</Text>
+              <Text style={styles.counterLabel}>seconds left</Text>
+              <View style={styles.bestContainer}>
+                <Image
+                  source={require("../../assets/icons/clock.png")}
+                  style={styles.bestIcon}
+                />
+                <Text style={styles.bestLabel}>{this.state.bestTime}</Text>
+              </View>
+            </View>
+          </View>
         </View>
-        <Animated.View
-          style={{
-            height: height / 2.5,
-            width: height / 2.5,
-            flexDirection: "row",
-            left: shakeAnimation
-          }}
-        >
-          {gameState === "INGAME" ? (
-            Array(size)
-              .fill()
-              .map((val, columnIndex) => (
-                <View
-                  style={{ flex: 1, flexDirection: "column" }}
-                  key={columnIndex}
-                >
-                  {Array(size)
-                    .fill()
-                    .map((val, rowIndex) => (
-                      <TouchableOpacity
-                        key={`${rowIndex}.${columnIndex}`}
-                        style={{
-                          flex: 1,
-                          backgroundColor:
-                            rowIndex == diffTileIndex[0] &&
-                            columnIndex == diffTileIndex[1]
-                              ? diffTileColor
-                              : `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`,
-                          margin: 2
-                        }}
-                        onPress={() => this.onTilePress(rowIndex, columnIndex)}
-                      />
-                    ))}
-                </View>
-              ))
-          ) : gameState === "PAUSED" ? (
-            <View style={styles.pausedContainer}>
-              <Image
-                source={require("../../assets/icons/mug.png")}
-                style={styles.pausedIcon}
-              />
-              <Text style={styles.pausedText}>COVFEFE BREAK</Text>
-            </View>
-          ) : (
-            <View style={styles.pausedContainer}>
-              <Image
-                source={require("../../assets/icons/dead.png")}
-                style={styles.pausedIcon}
-              />
-              <Text style={styles.pausedText}>U DED</Text>
-            </View>
-          )}
-        </Animated.View>
-        <View style={styles.bottomContainer}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.counterCount}>{this.state.points}</Text>
-            <Text style={styles.counterLabel}>points</Text>
-            <View style={styles.bestContainer}>
-              <Image
-                source={require("../../assets/icons/trophy.png")}
-                style={styles.bestIcon}
-              />
-              <Text style={styles.bestLabel}>{this.state.bestPoints}</Text>
-            </View>
-          </View>
-          <View style={{ flex: 1 }}>
-            <TouchableOpacity
-              style={{ alignItems: "center" }}
-              onPress={this.onBottomBarPress}
-            >
-              <Image source={bottomIcon} style={styles.bottomIcon} />
-            </TouchableOpacity>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.counterCount}>{this.state.timeLeft}</Text>
-            <Text style={styles.counterLabel}>seconds left</Text>
-            <View style={styles.bestContainer}>
-              <Image
-                source={require("../../assets/icons/clock.png")}
-                style={styles.bestIcon}
-              />
-              <Text style={styles.bestLabel}>{this.state.bestTime}</Text>
-            </View>
-          </View>
-        </View>
-      </View>
+      </SafeAreaView>
     );
   }
 }
