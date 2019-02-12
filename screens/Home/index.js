@@ -2,16 +2,19 @@ import React, { Component } from "react";
 import { View, Text, Image, TouchableOpacity } from "react-native";
 import { Audio } from "expo";
 import { Header } from "../../components";
+import { retrieveData } from '../../utilities';
 import styles from "./styles";
 
 export default class Home extends Component {
   state = {
-    isSoundOn: true
+    isSoundOn: true,
+    highScore: 0
   };
 
   async componentWillMount() {
     this.backgroundMusic = new Audio.Sound();
     this.buttonFX = new Audio.Sound();
+    retrieveData('highScore').then(val => this.setState({ highScore: val }));
     try {
       await this.backgroundMusic.loadAsync(
         require("../../assets/music/Komiku_Mushrooms.mp3")
@@ -64,7 +67,7 @@ export default class Home extends Component {
             source={require("../../assets/icons/trophy.png")}
             style={styles.trophyIcon}
           />
-          <Text style={styles.hiscore}>Hi-score: 0</Text>
+          <Text style={styles.hiscore}>Hi-score: {this.state.highScore}</Text>
         </View>
         <TouchableOpacity
           onPress={this.onLeaderboardPress}

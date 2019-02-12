@@ -1,3 +1,4 @@
-export * from './color'
+export * from './color';
+export * from './storage';
 
-export default {}
+export default {};

@@ -9,13 +9,20 @@ import {
 } from "react-native";
 import { Audio } from "expo";
 import { Header } from "../../components";
-import { generateRGB, mutateRGB } from "../../utilities";
+import {
+  generateRGB,
+  mutateRGB,
+  storeData,
+  retrieveData
+} from "../../utilities";
 import styles from "./styles";
 
-export default class Home extends Component {
+export default class Game extends Component {
   state = {
     points: 0,
+    bestPoints: 0, // < new
     timeLeft: 15,
+    bestTime: 0, // < new
     rgb: generateRGB(),
     size: 2,
     gameState: "INGAME", // three possible states: 'INGAME', 'PAUSED' and 'LOST'
@@ -24,14 +31,24 @@ export default class Home extends Component {
 
   async componentWillMount() {
     this.generateNewRound();
-    this.interval = setInterval(() => {
+    retrieveData('highScore').then(val => this.setState({ bestPoints: val }));
+    retrieveData('bestTime').then(val => this.setState({ bestTime: val }));
+    this.interval = setInterval(async () => {
       if (this.state.gameState === "INGAME") {
+        if (this.state.timeLeft > this.state.bestTime) {
+          this.setState(state => ({ bestTime: state.timeLeft }));
+          storeData('bestTime', this.state.timeLeft);
+        }
         if (this.state.timeLeft <= 0) {
           this.loseFX.replayAsync();
           this.backgroundMusic.stopAsync();
+          if (this.state.points > this.state.bestPoints) {
+            this.setState(state => ({ bestPoints: state.points }));
+            storeData('highScore', this.state.points);
+          }
           this.setState({ gameState: "LOST" });
         } else {
-          this.setState({ timeLeft: this.state.timeLeft - 1 });
+          this.setState(state => ({ timeLeft: state.timeLeft - 1 }));
         }
       }
     }, 1000);
@@ -239,7 +256,7 @@ export default class Home extends Component {
                 source={require("../../assets/icons/trophy.png")}
                 style={styles.bestIcon}
               />
-              <Text style={styles.bestLabel}>0</Text>
+              <Text style={styles.bestLabel}>{this.state.bestPoints}</Text>
             </View>
           </View>
           <View style={{ flex: 1 }}>
@@ -258,7 +275,7 @@ export default class Home extends Component {
                 source={require("../../assets/icons/clock.png")}
                 style={styles.bestIcon}
               />
-              <Text style={styles.bestLabel}>0</Text>
+              <Text style={styles.bestLabel}>{this.state.bestTime}</Text>
             </View>
           </View>
         </View>
