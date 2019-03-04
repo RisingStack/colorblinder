@@ -1,3 +1,5 @@
-export * from './Header'
+export * from './Header';
+export * from './Grid';
+export * from './BottomBar';
 
-export default {}
+export default {};

@@ -1,4 +1,4 @@
-import { AsyncStorage } from "react-native";
+import { AsyncStorage } from 'react-native';
 
 export const storeData = async (key, value) => {
   try {
@@ -8,7 +8,7 @@ export const storeData = async (key, value) => {
   }
 };
 
-export const retrieveData = async key => {
+export const retrieveData = async (key) => {
   try {
     const value = await AsyncStorage.getItem(`@ColorBlinder:${key}`);
     if (value !== null) {

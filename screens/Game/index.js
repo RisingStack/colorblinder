@@ -1,4 +1,4 @@
-import React, { Component } from "react";
+import React, { Component, Fragment } from 'react';
 import {
   View,
   SafeAreaView,
@@ -6,17 +6,18 @@ import {
   Dimensions,
   Text,
   Image,
-  TouchableOpacity
-} from "react-native";
-import { Audio } from "expo";
-import { Header } from "../../components";
+  TouchableOpacity,
+} from 'react-native';
+import { Audio } from 'expo';
+import { Header, Grid, BottomBar } from '../../components';
 import {
   generateRGB,
   mutateRGB,
   storeData,
-  retrieveData
-} from "../../utilities";
-import styles from "./styles";
+  retrieveData,
+  shakeAnimation,
+} from '../../utilities';
+import styles from './styles';
 
 export default class Game extends Component {
   state = {
@@ -26,28 +27,31 @@ export default class Game extends Component {
     bestTime: 0, // < new
     rgb: generateRGB(),
     size: 2,
-    gameState: "INGAME", // three possible states: 'INGAME', 'PAUSED' and 'LOST'
-    shakeAnimation: new Animated.Value(0)
+    gameState: 'INGAME', // three possible states: 'INGAME', 'PAUSED' and 'LOST'
+    shakeVal: new Animated.Value(0),
   };
 
   async componentWillMount() {
     this.generateNewRound();
-    retrieveData("highScore").then(val => this.setState({ bestPoints: val }));
-    retrieveData("bestTime").then(val => this.setState({ bestTime: val }));
+    retrieveData('highScore').then(val => this.setState({ bestPoints: val || 0 }));
+    retrieveData('bestTime').then(val => this.setState({ bestTime: val || 0 }));
+    const {
+      gameState, timeLeft, bestTime, points, bestPoints,
+    } = this.state;
     this.interval = setInterval(async () => {
-      if (this.state.gameState === "INGAME") {
-        if (this.state.timeLeft > this.state.bestTime) {
+      if (gameState === 'INGAME') {
+        if (timeLeft > bestTime) {
           this.setState(state => ({ bestTime: state.timeLeft }));
-          storeData("bestTime", this.state.timeLeft);
+          storeData('bestTime', timeLeft);
         }
-        if (this.state.timeLeft <= 0) {
+        if (timeLeft <= 0) {
           this.loseFX.replayAsync();
           this.backgroundMusic.stopAsync();
-          if (this.state.points > this.state.bestPoints) {
+          if (points > bestPoints) {
             this.setState(state => ({ bestPoints: state.points }));
-            storeData("highScore", this.state.points);
+            storeData('highScore', points);
           }
-          this.setState({ gameState: "LOST" });
+          this.setState({ gameState: 'LOST' });
         } else {
           this.setState(state => ({ timeLeft: state.timeLeft - 1 }));
         }
@@ -64,20 +68,20 @@ export default class Game extends Component {
 
     try {
       await this.backgroundMusic.loadAsync(
-        require("../../assets/music/Komiku_BattleOfPogs.mp3")
+        require('../../assets/music/Komiku_BattleOfPogs.mp3'),
       );
-      await this.buttonFX.loadAsync(require("../../assets/sfx/button.wav"));
+      await this.buttonFX.loadAsync(require('../../assets/sfx/button.wav'));
       await this.tileCorrectFX.loadAsync(
-        require("../../assets/sfx/tile_tap.wav")
+        require('../../assets/sfx/tile_tap.wav'),
       );
       await this.tileWrongFX.loadAsync(
-        require("../../assets/sfx/tile_wrong.wav")
+        require('../../assets/sfx/tile_wrong.wav'),
       );
-      await this.pauseInFX.loadAsync(require("../../assets/sfx/pause_in.wav"));
+      await this.pauseInFX.loadAsync(require('../../assets/sfx/pause_in.wav'));
       await this.pauseOutFX.loadAsync(
-        require("../../assets/sfx/pause_out.wav")
+        require('../../assets/sfx/pause_out.wav'),
       );
-      await this.loseFX.loadAsync(require("../../assets/sfx/lose.wav"));
+      await this.loseFX.loadAsync(require('../../assets/sfx/lose.wav'));
 
       await this.backgroundMusic.setIsLoopingAsync(true);
       await this.backgroundMusic.playAsync();
@@ -91,26 +95,26 @@ export default class Game extends Component {
     clearInterval(this.interval);
   }
 
-  generateSizeIndex = () => {
-    return Math.floor(Math.random() * this.state.size);
-  };
+  generateSizeIndex = size => Math.floor(Math.random() * size);
 
   generateNewRound = () => {
     const RGB = generateRGB();
     const mRGB = mutateRGB(RGB);
     const { points } = this.state;
+    const size = Math.min(Math.max(Math.floor(Math.sqrt(points)), 2), 5);
     this.setState({
-      size: Math.min(Math.max(Math.floor(Math.sqrt(points)), 2), 5)
-    });
-    this.setState({
-      diffTileIndex: [this.generateSizeIndex(), this.generateSizeIndex()],
+      size,
+      diffTileIndex: [
+        this.generateSizeIndex(size),
+        this.generateSizeIndex(size),
+      ],
       diffTileColor: `rgb(${mRGB.r}, ${mRGB.g}, ${mRGB.b})`,
-      rgb: RGB
+      rgb: RGB,
     });
   };
 
   onTilePress = (rowIndex, columnIndex) => {
-    const { diffTileIndex, points, timeLeft } = this.state;
+    const { diffTileIndex, points, timeLeft, shakeVal } = this.state;
     if (rowIndex == diffTileIndex[0] && columnIndex == diffTileIndex[1]) {
       // good tile
       this.tileCorrectFX.replayAsync();
@@ -118,59 +122,47 @@ export default class Game extends Component {
       this.generateNewRound();
     } else {
       // wrong tile
-      Animated.sequence([
-        Animated.timing(this.state.shakeAnimation, {
-          toValue: 50,
-          duration: 100
-        }),
-        Animated.timing(this.state.shakeAnimation, {
-          toValue: -50,
-          duration: 100
-        }),
-        Animated.timing(this.state.shakeAnimation, {
-          toValue: 50,
-          duration: 100
-        }),
-        Animated.timing(this.state.shakeAnimation, {
-          toValue: -50,
-          duration: 100
-        }),
-        Animated.timing(this.state.shakeAnimation, {
-          toValue: 0,
-          duration: 100
-        })
-      ]).start();
+      shakeAnimation(shakeVal);
       this.tileWrongFX.replayAsync();
       this.setState({ timeLeft: timeLeft - 2 });
     }
   };
 
   onBottomBarPress = async () => {
-    switch (this.state.gameState) {
-      case "INGAME": {
+    const { gameState } = this.state;
+    switch (gameState) {
+      case 'INGAME': {
         this.pauseInFX.replayAsync();
-        this.setState({ gameState: "PAUSED" });
+        this.setState({ gameState: 'PAUSED' });
         break;
       }
-      case "PAUSED": {
+      case 'PAUSED': {
         this.pauseOutFX.replayAsync();
-        this.setState({ gameState: "INGAME" });
+        this.setState({ gameState: 'INGAME' });
         break;
       }
-      case "LOST": {
+      case 'LOST': {
         this.backgroundMusic.replayAsync();
         await this.setState({
           points: 0,
           timeLeft: 15,
-          size: 2
+          size: 2,
         });
         this.generateNewRound();
         this.setState({
-          gameState: "INGAME"
+          gameState: 'INGAME',
         });
         break;
       }
+      default: {
+        return null;
+      }
     }
+  };
+
+  onExitPress = () => {
+    this.backgroundMusic.stopAsync();
+    this.props.navigation.goBack();
   };
 
   render() {
@@ -180,109 +172,74 @@ export default class Game extends Component {
       diffTileIndex,
       diffTileColor,
       gameState,
-      shakeAnimation
+      shakeVal,
+      points,
+      bestPoints,
+      timeLeft,
+      bestTime,
     } = this.state;
-    const { height } = Dimensions.get("window");
-    const bottomIcon =
-      gameState === "INGAME"
-        ? require("../../assets/icons/pause.png")
-        : gameState === "PAUSED"
-        ? require("../../assets/icons/play.png")
-        : require("../../assets/icons/replay.png");
+    const { width } = Dimensions.get('window');
 
     return (
       <SafeAreaView style={styles.container}>
-        <View style={{ flex: 1 }}>
-          <View style={{ position: "absolute", top: height / 6 }}>
-            <Header />
-          </View>
+        <View style={{ flex: 1, justifyContent: 'center' }}>
+          <Header />
+        </View>
+        <View style={{ flex: 5, justifyContent: 'center' }}>
           <Animated.View
             style={{
-              height: height / 2.5,
-              width: height / 2.5,
-              flexDirection: "row",
-              left: shakeAnimation
+              height: width * 0.875,
+              width: width * 0.875,
+              left: shakeVal,
+              flexDirection: 'row',
             }}
           >
-            {gameState === "INGAME" ? (
-              Array(size)
-                .fill()
-                .map((val, columnIndex) => (
-                  <View
-                    style={{ flex: 1, flexDirection: "column" }}
-                    key={columnIndex}
-                  >
-                    {Array(size)
-                      .fill()
-                      .map((val, rowIndex) => (
-                        <TouchableOpacity
-                          key={`${rowIndex}.${columnIndex}`}
-                          style={{
-                            flex: 1,
-                            backgroundColor:
-                              rowIndex == diffTileIndex[0] &&
-                              columnIndex == diffTileIndex[1]
-                                ? diffTileColor
-                                : `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`,
-                            margin: 2
-                          }}
-                          onPress={() =>
-                            this.onTilePress(rowIndex, columnIndex)
-                          }
-                        />
-                      ))}
-                  </View>
-                ))
-            ) : gameState === "PAUSED" ? (
-              <View style={styles.pausedContainer}>
-                <Image
-                  source={require("../../assets/icons/mug.png")}
-                  style={styles.pausedIcon}
-                />
-                <Text style={styles.pausedText}>COVFEFE BREAK</Text>
-              </View>
+            {gameState === 'INGAME' ? (
+              <Grid
+                size={size}
+                diffTileIndex={diffTileIndex}
+                diffTileColor={diffTileColor}
+                rgb={rgb}
+                onPress={this.onTilePress}
+              />
             ) : (
               <View style={styles.pausedContainer}>
-                <Image
-                  source={require("../../assets/icons/dead.png")}
-                  style={styles.pausedIcon}
-                />
-                <Text style={styles.pausedText}>U DED</Text>
+                {gameState === 'PAUSED' ? (
+                  <Fragment>
+                    <Image
+                      source={require('../../assets/icons/mug.png')}
+                      style={styles.pausedIcon}
+                    />
+                    <Text style={styles.pausedText}>COVFEFE BREAK</Text>
+                  </Fragment>
+                ) : (
+                  <Fragment>
+                    <Image
+                      source={require('../../assets/icons/dead.png')}
+                      style={styles.pausedIcon}
+                    />
+                    <Text style={styles.pausedText}>U DED</Text>
+                  </Fragment>
+                )}
+                <TouchableOpacity onPress={this.onExitPress}>
+                  <Image
+                    source={require('../../assets/icons/escape.png')}
+                    style={styles.exitIcon}
+                  />
+                </TouchableOpacity>
               </View>
             )}
           </Animated.View>
-          <View style={styles.bottomContainer}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.counterCount}>{this.state.points}</Text>
-              <Text style={styles.counterLabel}>points</Text>
-              <View style={styles.bestContainer}>
-                <Image
-                  source={require("../../assets/icons/trophy.png")}
-                  style={styles.bestIcon}
-                />
-                <Text style={styles.bestLabel}>{this.state.bestPoints}</Text>
-              </View>
-            </View>
-            <View style={{ flex: 1 }}>
-              <TouchableOpacity
-                style={{ alignItems: "center" }}
-                onPress={this.onBottomBarPress}
-              >
-                <Image source={bottomIcon} style={styles.bottomIcon} />
-              </TouchableOpacity>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.counterCount}>{this.state.timeLeft}</Text>
-              <Text style={styles.counterLabel}>seconds left</Text>
-              <View style={styles.bestContainer}>
-                <Image
-                  source={require("../../assets/icons/clock.png")}
-                  style={styles.bestIcon}
-                />
-                <Text style={styles.bestLabel}>{this.state.bestTime}</Text>
-              </View>
-            </View>
-          </View>
+        </View>
+        <View style={{ flex: 2 }}>
+          <BottomBar
+            points={points}
+            bestPoints={bestPoints}
+            timeLeft={timeLeft}
+            bestTime={bestTime}
+            onBottomBarPress={this.onBottomBarPress}
+            gameState={gameState}
+          />
         </View>
       </SafeAreaView>
     );
