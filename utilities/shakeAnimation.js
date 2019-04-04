@@ -22,5 +22,3 @@ export const shakeAnimation = value => Animated.sequence([
     duration: 100,
   }),
 ]).start();
-
-export default {};

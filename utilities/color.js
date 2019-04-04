@@ -12,4 +12,3 @@ export const mutateRGB = ({ r, g, b }) => {
   return { r: newR, g: newG, b: newB };
 };
 
-export default {};

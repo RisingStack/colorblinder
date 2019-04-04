@@ -28,5 +28,3 @@ Header.propTypes = {
 Header.defaultProps = {
   fontSize: scale(45),
 };
-
-export default { };

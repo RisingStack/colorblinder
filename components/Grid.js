@@ -26,5 +26,3 @@ export const Grid = ({
         ))}
     </View>
   ));
-
-export default {};

@@ -35,10 +35,11 @@ export default class Game extends Component {
     this.generateNewRound();
     retrieveData('highScore').then(val => this.setState({ bestPoints: val || 0 }));
     retrieveData('bestTime').then(val => this.setState({ bestTime: val || 0 }));
-    const {
-      gameState, timeLeft, bestTime, points, bestPoints,
-    } = this.state;
     this.interval = setInterval(async () => {
+      const {
+        gameState, timeLeft, bestTime, points, bestPoints,
+      } = this.state;
+
       if (gameState === 'INGAME') {
         if (timeLeft > bestTime) {
           this.setState(state => ({ bestTime: state.timeLeft }));
@@ -51,7 +52,7 @@ export default class Game extends Component {
             this.setState(state => ({ bestPoints: state.points }));
             storeData('highScore', points);
           }
-          this.setState({ gameState: 'LOST' });
+          this.setState({ timeLeft: 0, gameState: 'LOST' });
         } else {
           this.setState(state => ({ timeLeft: state.timeLeft - 1 }));
         }

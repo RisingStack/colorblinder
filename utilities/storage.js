@@ -18,5 +18,3 @@ export const retrieveData = async (key) => {
     console.log(error);
   }
 };
-
-export default {};

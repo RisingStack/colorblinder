@@ -54,5 +54,3 @@ export const BottomBar = ({
     </View>
   </View>
 );
-
-export default {};
