@@ -84,10 +84,10 @@ export default class Home extends Component {
               style={styles.trophyIcon}
             />
             <Text style={styles.hiscore}>
-Hi-score:
-{' '}
-{this.state.highScore}
-</Text>
+              Hi-score:
+              {' '}
+              {this.state.highScore}
+            </Text>
           </View>
           <TouchableOpacity
             onPress={this.onLeaderboardPress}

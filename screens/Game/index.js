@@ -115,7 +115,9 @@ export default class Game extends Component {
   };
 
   onTilePress = (rowIndex, columnIndex) => {
-    const { diffTileIndex, points, timeLeft, shakeVal } = this.state;
+    const {
+      diffTileIndex, points, timeLeft, shakeVal,
+    } = this.state;
     if (rowIndex == diffTileIndex[0] && columnIndex == diffTileIndex[1]) {
       // good tile
       this.tileCorrectFX.replayAsync();
